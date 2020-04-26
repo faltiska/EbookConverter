@@ -2,9 +2,9 @@
 
 If you are looking for the original, written by Greg Kochaniak, it's here: https://github.com/gregko/EbookConverter
 
-Greg used 
+Greg used
     LIBMOBI code from Bartek Fabiszewski (https://github.com/bfabiszewski/libmobi)
-and 
+and
     FB2 to Epub Converter from Alexey Bobkov (https://code.google.com/archive/p/fb2-to-epub-converter/)
 to write and Android-ready ebook conversion library.
 
@@ -16,5 +16,5 @@ Use the "assemble" gradle target in the EbookConvLibrary module to build the arc
 I've updated the LIBMOBI code to the last version available on April 26, 2020 in Bartek's repository.
 I've also updated the build tools and android versions everywhere.
 
-I have removed the test modules, f you need them, go to Greg's repo.
+I have removed the test modules, if you need them, go to Greg's repo.
   
