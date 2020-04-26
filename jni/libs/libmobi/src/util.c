@@ -1724,22 +1724,22 @@ static MOBI_RET mobi_decompress_content(const MOBIData *m, char *text, FILE *fil
                 return MOBI_DATA_CORRUPT;
             }
             if (decrypt_size) {
-				ret = mobi_drm_decrypt_buffer(decompressed, curr->data, decrypt_size, m);
-				if (ret != MOBI_SUCCESS) {
-					mobi_free_huffcdic(huffcdic);
-					free(decompressed);
-					return ret;
-				}
-				memcpy(curr->data, decompressed, decrypt_size);
-				if (compression_type != RECORD0_HUFF_COMPRESSION && (extra_flags & 1)) {
-					// update multibyte data size after decryption
-					extra_size = mobi_get_record_extrasize(curr, extra_flags);
-						if (extra_size == MOBI_NOTSET) {
-						free(decompressed);
-						return MOBI_DATA_CORRUPT;
-					}
-				}
-			}
+                ret = mobi_drm_decrypt_buffer(decompressed, curr->data, decrypt_size, m);
+                if (ret != MOBI_SUCCESS) {
+                    mobi_free_huffcdic(huffcdic);
+                    free(decompressed);
+                    return ret;
+                }
+                memcpy(curr->data, decompressed, decrypt_size);
+                if (compression_type != RECORD0_HUFF_COMPRESSION && (extra_flags & 1)) {
+                    // update multibyte data size after decryption
+                    extra_size = mobi_get_record_extrasize(curr, extra_flags);
+                    if (extra_size == MOBI_NOTSET) {
+                        free(decompressed);
+                        return MOBI_DATA_CORRUPT;
+                    }
+                }
+            }
         }
 #endif
         if (extra_size > curr->size) {
@@ -2533,6 +2533,26 @@ bool mobi_is_encrypted(const MOBIData *m) {
         (m->rh->encryption_type == RECORD0_OLD_ENCRYPTION ||
          m->rh->encryption_type == RECORD0_MOBI_ENCRYPTION)) {
         return true;
+    }
+    return false;
+}
+
+/**
+ @brief Check if loaded document is Print Replica type
+
+ @param[in] m MOBIData structure with loaded Record(s) 0 headers
+ @return true or false
+ */
+bool mobi_is_replica(const MOBIData *m) {
+    if (m == NULL) {
+        debug_print("%s", "Mobi structure not initialized\n");
+        return false;
+    }
+    if (m->rec && m->rh && m->rh->compression_type == RECORD0_NO_COMPRESSION) {
+        MOBIPdbRecord *rec = m->rec->next;
+        if (rec && rec->size >= sizeof(REPLICA_MAGIC)) {
+            return memcmp(rec->data, REPLICA_MAGIC, sizeof(REPLICA_MAGIC) - 1) == 0;
+        }
     }
     return false;
 }

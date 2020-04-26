@@ -21,7 +21,7 @@ static std::string fromJstring(JNIEnv *env, jstring js) {
 }
 
 extern "C"
-JNIEXPORT int JNICALL Java_com_hyperionics_ebookconverter_ConvLib_mobiToEpubNative(
+JNIEXPORT int JNICALL Java_com_ebookconvlibrary_ConvLib_mobiToEpubNative(
 	JNIEnv *env, jclass cls,
 	jstring mobiFileName, jstring epubFileName)
 {
@@ -33,7 +33,7 @@ JNIEXPORT int JNICALL Java_com_hyperionics_ebookconverter_ConvLib_mobiToEpubNati
 using namespace Fb2ToEpub;
 
 extern "C"
-JNIEXPORT int JNICALL Java_com_hyperionics_ebookconverter_ConvLib_fb2ToEpubNative(
+JNIEXPORT int JNICALL Java_com_ebookconvlibrary_ConvLib_fb2ToEpubNative(
 	JNIEnv *env, jclass cls,
 	jstring fb2FileName, jstring epubFileName, jstring cssDir, jstring fontsDir)
 {

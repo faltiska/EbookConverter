@@ -1,19 +1,20 @@
-# EbookConverter for Android
+# Fork of EbookConverter for Android by Greg Kochaniak 
 
-MOBI/AZW/PRC and FB2 ebook format converter to EPUB. Using open source libraries libmobi by Bartek Fabiszewski
-(https://github.com/bfabiszewski/libmobi) and fb2-to-epub-converter by Alexey Bobkov 
-(https://code.google.com/archive/p/fb2-to-epub-converter/)
+If you are looking for the original, written by Greg Kochaniak, it's here: https://github.com/gregko/EbookConverter
 
-The shared library libEbookConv.so is used in my @Voice Aloud Reader app for Android (https://play.google.com/store/apps/details?id=com.hyperionics.avar) under LGPL license,
-therefore publishing this source code here also serves to fulfill the terms of LGPL.
+Greg used 
+    LIBMOBI code from Bartek Fabiszewski (https://github.com/bfabiszewski/libmobi)
+and 
+    FB2 to Epub Converter from Alexey Bobkov (https://code.google.com/archive/p/fb2-to-epub-converter/)
+to write and Android-ready ebook conversion library.
 
-The EbookConv.sln and .vcxproj are Visual Studio 2015 solution and project which I use to develop and debug
-the native Android code, with the help of VisualGDB tools, but the native .so libraries can be also built
-stand alone by running Android ndk-build command in jni directory.
+This fork offers an IDEA project containing an android library and a test app.
+The Library builds the C code and offers an .aar archive you can include in your project.
 
-The MobiTest and Fb2Test are Visual Studio C++ windows command line programs to test the converter code.
+Use the "assemble" gradle target in the EbookConvLibrary module to build the archive.
 
-The EbookConvTest is a small Android application project (APK) for testing under Android and for the
-end users, should they wish to use this tool for ebook format conversions.
+I've updated the LIBMOBI code to the last version available on April 26, 2020 in Bartek's repository.
+I've also updated the build tools and android versions everywhere.
 
-Greg Kochaniak, Hyperionics
+I have removed the test modules, f you need them, go to Greg's repo.
+  

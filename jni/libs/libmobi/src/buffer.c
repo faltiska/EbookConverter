@@ -32,8 +32,8 @@ MOBIBuffer * buffer_init(const size_t len) {
     MOBIBuffer *buf = buffer_init_null(data, len);
     if (buf == NULL) {
         free(data);
-	}
-	return buf;
+    }
+    return buf;
 }
 
 /**

@@ -632,8 +632,8 @@ static MOBI_RET mobi_drm_bookpid_from_serial(char pid[PIDSIZE + 1], const MOBIDa
     char checksum[2] = "\0";
     mobi_drm_pidchecksum(checksum, (unsigned char *) pid);
     memcpy(&pid[PIDSIZE - 2], checksum, 2);
-        return MOBI_SUCCESS;
-    }
+    return MOBI_SUCCESS;
+}
 
 /**
  @brief Store key for encryption in MOBIData stucture. 

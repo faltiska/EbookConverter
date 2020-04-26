@@ -532,27 +532,27 @@ MOBI_RET mobi_parse_indx(const MOBIPdbRecord *indx_record, MOBIIndx *indx, MOBIT
         if (encoding == MOBI_NOTSET) { encoding = MOBI_CP1252; }
         buffer_seek(buf, 4); /* 32 */
         const uint32_t total_entries_count = buffer_get32(buf); /* 36: total entries count */
-    if (total_entries_count > INDX_TOTAL_MAXCNT) {
+        if (total_entries_count > INDX_TOTAL_MAXCNT) {
             debug_print("Too many total index entries (%u)\n", total_entries_count);
-        buffer_free_null(buf);
-        return MOBI_DATA_CORRUPT;
-    }
+            buffer_free_null(buf);
+            return MOBI_DATA_CORRUPT;
+        }
         uint32_t ordt_offset = buffer_get32(buf); /* 40: ORDT offset; currently not used */
         if (ordt_offset + ORDT_RECORD_MAXCNT + 4 > indx_record->size) {
             ordt_offset = 0;
         }
         uint32_t ligt_offset = buffer_get32(buf); /* 44: LIGT offset; currently static table used instead */
-    uint32_t ligt_entries_count = buffer_get32(buf); /* 48: LIGT entries count */
+        uint32_t ligt_entries_count = buffer_get32(buf); /* 48: LIGT entries count */
         if (ligt_offset + 4 * ligt_entries_count + 4 > indx_record->size) {
             ligt_offset = 0;
             ligt_entries_count = 0;
-    }
-    const uint32_t cncx_records_count = buffer_get32(buf); /* 52: CNCX entries count */
-    if (cncx_records_count > CNCX_RECORD_MAXCNT) {
-        debug_print("Too many CNCX records (%u)\n", cncx_records_count);
-        buffer_free_null(buf);
-        return MOBI_DATA_CORRUPT;
-    }
+        }
+        const uint32_t cncx_records_count = buffer_get32(buf); /* 52: CNCX entries count */
+        if (cncx_records_count > CNCX_RECORD_MAXCNT) {
+            debug_print("Too many CNCX records (%u)\n", cncx_records_count);
+            buffer_free_null(buf);
+            return MOBI_DATA_CORRUPT;
+        }
         /* 56: unk count */
         /* 60-148: phonetizer */
         uint32_t ordt_type = 0;
@@ -562,7 +562,7 @@ MOBI_RET mobi_parse_indx(const MOBIPdbRecord *indx_record, MOBIIndx *indx, MOBIT
         uint32_t index_name_offset = 0;
         uint32_t index_name_length = 0;
         if (header_length >= 180) {
-    buffer_setpos(buf, 164);
+            buffer_setpos(buf, 164);
             ordt_type = buffer_get32(buf); /* 164: ORDT type */
             ordt_entries_count = buffer_get32(buf); /* 168: ORDT entries count */
             ordt1_offset = buffer_get32(buf); /* 172: ORDT1 offset; currently not used */
@@ -576,9 +576,9 @@ MOBI_RET mobi_parse_indx(const MOBIPdbRecord *indx_record, MOBIIndx *indx, MOBIT
             }
             index_name_offset = buffer_get32(buf); /* 180: Index name offset */
             index_name_length = buffer_get32(buf); /* 184: Index name length */
-    }
+        }
         buf->maxlen = indx_record->size;
-    buffer_setpos(buf, header_length);
+        buffer_setpos(buf, header_length);
         ret = mobi_parse_tagx(buf, tagx);
         if (ret != MOBI_SUCCESS) {
             buffer_free_null(buf);
@@ -627,51 +627,51 @@ MOBI_RET mobi_parse_indx(const MOBIPdbRecord *indx_record, MOBIIndx *indx, MOBIT
         /* else parse IDXT entries offsets */
         if (idxt_offset == 0) {
             debug_print("%s", "Missing IDXT offset\n");
-        buffer_free_null(buf);
+            buffer_free_null(buf);
             return MOBI_DATA_CORRUPT;
-    }
+        }
         if (idxt_offset + 2 * entries_count + 4 > indx_record->size ) {
             debug_print("IDXT entries beyond record end%s", "\n");
-        buffer_free_null(buf);
-        return MOBI_DATA_CORRUPT;
-    }
-    buffer_setpos(buf, idxt_offset);
-    MOBIIdxt idxt;
-    uint32_t *offsets = malloc((entries_count + 1) * sizeof(uint32_t));
-    if (offsets == NULL) {
-        buffer_free_null(buf);
-        debug_print("%s\n", "Memory allocation failed");
-        return MOBI_MALLOC_FAILED;
-    }
-    idxt.offsets = offsets;
-    ret = mobi_parse_idxt(buf, &idxt, entries_count);
-    if (ret != MOBI_SUCCESS) {
-        debug_print("%s", "IDXT parsing failed\n");
-        buffer_free_null(buf);
-        free(offsets);
-        return ret;
-    }
-    /* parse entries */
-    if (entries_count > 0) {
-        if (indx->entries == NULL) {
-            indx->entries = malloc(indx->total_entries_count * sizeof(MOBIIndexEntry));
+            buffer_free_null(buf);
+            return MOBI_DATA_CORRUPT;
+        }
+        buffer_setpos(buf, idxt_offset);
+        MOBIIdxt idxt;
+        uint32_t *offsets = malloc((entries_count + 1) * sizeof(uint32_t));
+        if (offsets == NULL) {
+            buffer_free_null(buf);
+            debug_print("%s\n", "Memory allocation failed");
+            return MOBI_MALLOC_FAILED;
+        }
+        idxt.offsets = offsets;
+        ret = mobi_parse_idxt(buf, &idxt, entries_count);
+        if (ret != MOBI_SUCCESS) {
+            debug_print("%s", "IDXT parsing failed\n");
+            buffer_free_null(buf);
+            free(offsets);
+            return ret;
+        }
+        /* parse entries */
+        if (entries_count > 0) {
             if (indx->entries == NULL) {
-                buffer_free_null(buf);
-                free(offsets);
-                debug_print("%s\n", "Memory allocation failed");
-                return MOBI_MALLOC_FAILED;
+                indx->entries = malloc(indx->total_entries_count * sizeof(MOBIIndexEntry));
+                if (indx->entries == NULL) {
+                    buffer_free_null(buf);
+                    free(offsets);
+                    debug_print("%s\n", "Memory allocation failed");
+                    return MOBI_MALLOC_FAILED;
+                }
             }
-        }
-        size_t i = 0;
-        while (i < entries_count) {
-            ret = mobi_parse_index_entry(indx, idxt, tagx, ordt, buf, i++);
-            if (ret != MOBI_SUCCESS) {
-                buffer_free_null(buf);
-                free(offsets);
-                return ret;
+            size_t i = 0;
+            while (i < entries_count) {
+                ret = mobi_parse_index_entry(indx, idxt, tagx, ordt, buf, i++);
+                if (ret != MOBI_SUCCESS) {
+                    buffer_free_null(buf);
+                    free(offsets);
+                    return ret;
+                }
             }
-        }
-        indx->entries_count += entries_count;
+            indx->entries_count += entries_count;
         }
         free(offsets);
     }

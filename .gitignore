@@ -13,7 +13,11 @@ Debug/
 CodeDB/
 VisualGDBCache/
 .vs/
+.gradle/
 .idea/
+libs/
+obj/
+build/
 
 #other
 *.o
@@ -42,7 +46,3 @@ AndroidStripError.txt
 *.epub
 *.fb2
 *.fb2.zip
-
-/build/
-/.gradle/
-/obj/

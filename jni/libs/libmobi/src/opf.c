@@ -564,6 +564,7 @@ MOBI_RET mobi_build_ncx(MOBIRawml *rawml, const OPF *opf) {
             debug_print("%s\n", "Memory allocation failed");
             return MOBI_MALLOC_FAILED;
         }
+        MOBIAttrType pref_attr = ATTR_ID;
         while (i < count) {
             const MOBIIndexEntry *ncx_entry = &rawml->ncx->entries[i];
             const char *label = ncx_entry->label;
@@ -607,7 +608,7 @@ MOBI_RET mobi_build_ncx(MOBIRawml *rawml, const OPF *opf) {
                 }
                 uint32_t filenumber;
                 char targetid[MOBI_ATTRNAME_MAXSIZE + 1];
-                ret = mobi_get_id_by_posoff(&filenumber, targetid, rawml, posfid, posoff);
+                ret = mobi_get_id_by_posoff(&filenumber, targetid, rawml, posfid, posoff, &pref_attr);
                 if (ret != MOBI_SUCCESS) {
                     free(text);
                     free(target);
@@ -1375,8 +1376,7 @@ MOBI_RET mobi_xml_write_spine(xmlTextWriterPtr writer, const MOBIRawml *rawml) {
         curr = curr->next;
     }
     if (curr) {
-        //sprintf(ncxid, "resource%05zu", curr->uid);
-		sprintf(ncxid, "toc"); // GKochaniak, changed
+        snprintf(ncxid, sizeof(ncxid), "resource%05zu", curr->uid);
     } else {
         return MOBI_DATA_CORRUPT;
     }
@@ -1460,24 +1460,10 @@ MOBI_RET mobi_xml_write_manifest(xmlTextWriterPtr writer, const MOBIRawml *rawml
     }
     if (rawml->resources != NULL) {
         MOBIPart *curr = rawml->resources;
-		bool hasToc = false; // GKochaniak
-		bool hasContent = false; // GKochaniak
         while (curr != NULL) {
             MOBIFileMeta file_meta = mobi_get_filemeta_by_type(curr->type);
-			if (file_meta.type == T_NCX && !hasToc) { // GKochaniak + 11 lines below
-				sprintf(href, "toc.%s", file_meta.extension);
-				sprintf(id, "toc");
-				hasToc = true;
-			}
-			else if (file_meta.type == T_OPF && !hasContent) {
-				sprintf(href, "content.%s", file_meta.extension);
-				sprintf(id, "content");
-				hasContent = true;
-			}
-			else {
-				sprintf(href, "resource%05zu.%s", curr->uid, file_meta.extension);
-				sprintf(id, "resource%05zu", curr->uid);
-			}
+            snprintf(href, sizeof(href), "resource%05zu.%s", curr->uid, file_meta.extension);
+            snprintf(id, sizeof(id), "resource%05zu", curr->uid);
             MOBI_RET ret = mobi_xml_write_item(writer, id, href, file_meta.mime_type);
             if (ret != MOBI_SUCCESS) {
                 return ret;
