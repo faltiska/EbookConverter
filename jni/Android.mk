@@ -10,13 +10,13 @@ LOCAL_LDLIBS := -lz -llog
 LOCAL_CFLAGS := 
 LOCAL_CPPFLAGS := 
 LOCAL_LDFLAGS := -Wl,--gc-sections 
-LOCAL_STATIC_LIBRARIES := libmobi fb2toepub
+LOCAL_STATIC_LIBRARIES := libmobi
 
 # Note: I use LOCAL_WHOLE_STATIC_LIBRARIES for the libs below, as I need to call
 # some functions from them in my larger project. If this is not necessary, lump
 # them all together in LOCAL_STATIC_LIBRARIES
 LOCAL_WHOLE_STATIC_LIBRARIES := unzip101e libiconv libxml2
-LOCAL_SHARED_LIBRARIES := 
+LOCAL_SHARED_LIBRARIES :=
 include $(BUILD_SHARED_LIBRARY)
 
 ################################################################################
@@ -137,42 +137,5 @@ LOCAL_CFLAGS += -Wno-write-strings
 LOCAL_SRC_FILES += libs/unzip101e/unzip.c
 LOCAL_SRC_FILES += libs/unzip101e/ioapi.c
 LOCAL_SRC_FILES += libs/unzip101e/zip.c
-
-include $(BUILD_STATIC_LIBRARY)
-
-################################################################################
-# fb2toepub
-
-include $(CLEAR_VARS)
-LOCAL_MODULE := fb2toepub
-LOCAL_C_INCLUDES += $(LOCAL_PATH)/libs/fb2toepub
-LOCAL_C_INCLUDES += $(LOCAL_PATH)/libs/libs/fb2toepub/tiniconv
-LOCAL_C_INCLUDES += $(LOCAL_PATH)/libs/unzip101e/
-LOCAL_CFLAGS += -Wno-write-strings
-LOCAL_CPPFLAGS += -fexceptions -Dunix
-
-LOCAL_SRC_FILES += libs/fb2toepub/tiniconv/tiniconv.c
-LOCAL_SRC_FILES += libs/fb2toepub/tiniconv/tiniconv_desc.c
-LOCAL_SRC_FILES += libs/fb2toepub/base64.cpp
-LOCAL_SRC_FILES += libs/fb2toepub/convinfo.cpp
-LOCAL_SRC_FILES += libs/fb2toepub/convpass1.cpp
-LOCAL_SRC_FILES += libs/fb2toepub/convpass2.cpp
-# LOCAL_SRC_FILES += libs/fb2toepub/error.cpp - re-done with std::exception
-# LOCAL_SRC_FILES += libs/fb2toepub/fb2toepub.cpp - main() function, not needed in a library
-LOCAL_SRC_FILES += libs/fb2toepub/fb2toepubconv.cpp
-LOCAL_SRC_FILES += libs/fb2toepub/mangling.cpp
-LOCAL_SRC_FILES += libs/fb2toepub/opentypefont.cpp
-LOCAL_SRC_FILES += libs/fb2toepub/scandir.cpp
-LOCAL_SRC_FILES += libs/fb2toepub/scanner.cpp
-LOCAL_SRC_FILES += libs/fb2toepub/scannermisc.cpp
-LOCAL_SRC_FILES += libs/fb2toepub/stream.cpp
-LOCAL_SRC_FILES += libs/fb2toepub/streamconv.cpp
-LOCAL_SRC_FILES += libs/fb2toepub/streamconvICU.cpp
-LOCAL_SRC_FILES += libs/fb2toepub/streamtini.cpp
-LOCAL_SRC_FILES += libs/fb2toepub/streamutf8.cpp
-LOCAL_SRC_FILES += libs/fb2toepub/streamzip.cpp
-LOCAL_SRC_FILES += libs/fb2toepub/translit.cpp
-LOCAL_SRC_FILES += libs/fb2toepub/types.cpp
-LOCAL_SRC_FILES += libs/fb2toepub/uuidmisc.cpp
 
 include $(BUILD_STATIC_LIBRARY)
