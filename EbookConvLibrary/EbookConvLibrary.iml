@@ -102,12 +102,6 @@
     <content url="file://$MODULE_DIR$/../jni">
       <sourceFolder url="file://$MODULE_DIR$/../jni" isTestSource="false" />
     </content>
-    <content url="file://$MODULE_DIR$/../jni/libs/fb2toepub">
-      <sourceFolder url="file://$MODULE_DIR$/../jni/libs/fb2toepub" isTestSource="false" />
-    </content>
-    <content url="file://$MODULE_DIR$/../jni/libs/fb2toepub/tiniconv">
-      <sourceFolder url="file://$MODULE_DIR$/../jni/libs/fb2toepub/tiniconv" isTestSource="false" />
-    </content>
     <content url="file://$MODULE_DIR$/../jni/libs/libiconv/lib">
       <sourceFolder url="file://$MODULE_DIR$/../jni/libs/libiconv/lib" isTestSource="false" />
     </content>
