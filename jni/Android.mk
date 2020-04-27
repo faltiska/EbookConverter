@@ -31,8 +31,6 @@ LOCAL_C_INCLUDES += $(LOCAL_PATH)/libs/libiconv/include
 LOCAL_C_INCLUDES += $(LOCAL_PATH)/libs/libiconv/libcharset/include
 LOCAL_C_INCLUDES += $(LOCAL_PATH)/libs/zlib
 LOCAL_C_INCLUDES += $(LOCAL_PATH)/libs/unzip101e
-#LOCAL_C_INCLUDES += $(LOCAL_PATH)/libs/tidylib/src
-#LOCAL_C_INCLUDES += $(LOCAL_PATH)/libs/tidylib/include
 
 LOCAL_SRC_FILES += libs/libmobi/src/buffer.c
 LOCAL_SRC_FILES += libs/libmobi/src/compression.c

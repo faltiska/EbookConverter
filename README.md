@@ -12,9 +12,10 @@ This fork offers an IDEA project containing an android library and a test app.
 The Library builds the C code and offers an .aar archive you can include in your project.
 
 Use the "assemble" gradle target in the EbookConvLibrary module to build the archive.
+The result will be in /EbookConvLibrary/build/outputs/aar/, look for EbookConvLibrary-release.aar or EbookConvLibrary-debug.aar
 
 I've updated the LIBMOBI code to the last version available on April 26, 2020 in Bartek's repository.
-I've also updated the build tools and android versions everywhere.
+I've also updated the android sdk and build tools versions everywhere.
 
 I have removed the test modules, if you need them, go to Greg's repo.
   
