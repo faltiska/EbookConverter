@@ -45,7 +45,7 @@ import java.util.Collections;
 import java.util.Comparator;
 
 public class GenericFileDialog extends ListActivity implements AdapterView.OnItemLongClickListener {
-    public static final int MODE_CREATE = 0;
+    private static final int MODE_CREATE = 0;
     public static final int MODE_OPEN = 1;
 
 	private static final String ROOT = "/";
@@ -54,23 +54,23 @@ public class GenericFileDialog extends ListActivity implements AdapterView.OnIte
 	public static final String RESULT_PATH = "RESULT_PATH";
 	public static final String SELECTION_MODE = "SELECTION_MODE";
 
-    public static final String MUST_SELECT_DIR = "MUST_SELECT_DIR";
-    public static final String MUST_CREATE_NEW = "MUST_CREATE_NEW";
-    public static final String SUGGESTED_NAME = "SUGGESTED_NAME";
+    private static final String MUST_SELECT_DIR = "MUST_SELECT_DIR";
+    private static final String MUST_CREATE_NEW = "MUST_CREATE_NEW";
+    private static final String SUGGESTED_NAME = "SUGGESTED_NAME";
     public static final String SET_TITLE_TEXT = "SET_TITLE_TEXT";
 
-    protected static final int REQUEST_MOVE_FILES = 1;
+    private static final int REQUEST_MOVE_FILES = 1;
 
     public static final String INVALID_FNAME_CHARS =
             "\\/\"\0\n\r\t\f`'?*<>|:\u2018\u2019";
-    public static final String INVALID_FNAME_CHARS_REGEX =
+    private static final String INVALID_FNAME_CHARS_REGEX =
             "['\\\\'|'/'|'\"'|\\n'|'\\r'|'\\t'|'\\000'|'\\f'|'`'|'\\''|'\\?'|'\\*'|'<'|'>'|'\\|'|':'|'\\u2018'|'\\u2019']";
-    public static final String INVALID_FNAME_REGEX = ".*" + INVALID_FNAME_CHARS_REGEX + ".*";
+    private static final String INVALID_FNAME_REGEX = ".*" + INVALID_FNAME_CHARS_REGEX + ".*";
 
 	private TextView myPath;
 	private EditText mFileName;
     private ArrayList<FileRowData> fileList;
-    FileRowAdapter adapter = null;
+    private FileRowAdapter adapter = null;
 
 	private Button selectButton;
 
@@ -79,7 +79,7 @@ public class GenericFileDialog extends ListActivity implements AdapterView.OnIte
 	private InputMethodManager inputManager;
 	private String currentPath = ROOT;
     private String startPath;
-    private ArrayList<String> pathStack = new ArrayList<String>();
+    private final ArrayList<String> pathStack = new ArrayList<String>();
 
 	private int selectionMode = MODE_CREATE;
 
@@ -331,7 +331,7 @@ public class GenericFileDialog extends ListActivity implements AdapterView.OnIte
     }
 
     @TargetApi(Build.VERSION_CODES.FROYO)
-    void createRenamePrompt(final boolean createDir) {
+    private void createRenamePrompt(final boolean createDir) {
         if (!dirWritable(currentPath)) {
             Lt.alert(GenericFileDialog.this, R.string.hts_no_write_perm);
             return;
@@ -679,7 +679,7 @@ public class GenericFileDialog extends ListActivity implements AdapterView.OnIte
         }
     }
 
-    public class FrdComparator implements Comparator<FileRowData> {
+    class FrdComparator implements Comparator<FileRowData> {
         @Override
         public int compare(FileRowData o1, FileRowData o2) {
             if (o1.imageId == o2.imageId) {
@@ -693,9 +693,9 @@ public class GenericFileDialog extends ListActivity implements AdapterView.OnIte
 
     class FileRowData {
         File file;
-        String name;
-        int imageId;
-        boolean selected;
+        final String name;
+        final int imageId;
+        final boolean selected;
 
         FileRowData(File fil, String fName, int iId) {
             file = fil;
@@ -716,16 +716,16 @@ public class GenericFileDialog extends ListActivity implements AdapterView.OnIte
     static abstract class OpCallback {
         BgTask myTask = null;
         public BgTask getTask() { return myTask; }
-        public abstract boolean runInBg();
-        public abstract void onFinished(boolean result); // result is: -2 not started, -1 in progress, 0 failed, 1 succeeded
+        protected abstract boolean runInBg();
+        protected abstract void onFinished(boolean result); // result is: -2 not started, -1 in progress, 0 failed, 1 succeeded
     }
 
-    static BgTask bgTask(Context context, boolean wantProgress, String progTitle, String progText, OpCallback cb) {
-        return bgTask(context, wantProgress, progTitle, progText, cb, false, null);
+    private static void bgTask(Context context, boolean wantProgress, String progTitle, String progText, OpCallback cb) {
+        bgTask(context, wantProgress, progTitle, progText, cb, false, null);
     }
 
-    static BgTask bgTask(Context context, boolean wantProgress, String progTitle, String progText, OpCallback cb,
-                                boolean cancelable, DialogInterface.OnCancelListener cancelListener) {
+    private static BgTask bgTask(Context context, boolean wantProgress, String progTitle, String progText, OpCallback cb,
+                                 boolean cancelable, DialogInterface.OnCancelListener cancelListener) {
         BgTask task = new BgTask(context);
         if (cb != null) {
             task.myOpCallback = cb;
@@ -751,7 +751,7 @@ public class GenericFileDialog extends ListActivity implements AdapterView.OnIte
 
         private BgTask() {} // prevent direct object creation
 
-        protected BgTask(Context ctx) {
+        BgTask(Context ctx) {
             context = ctx;
         }
 

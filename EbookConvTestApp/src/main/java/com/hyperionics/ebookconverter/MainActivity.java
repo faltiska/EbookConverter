@@ -6,7 +6,6 @@ import android.app.Dialog;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.pm.PackageManager;
-import android.content.res.AssetManager;
 import android.os.Bundle;
 import android.support.annotation.NonNull;
 import android.support.design.widget.FloatingActionButton;
@@ -19,13 +18,14 @@ import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
 
+import com.adobe.dp.fb2.convert.FB2Converter;
 import com.ebookconvlibrary.ConvLib;
 
-import java.io.*;
+import java.io.File;
 
 public class MainActivity extends AppCompatActivity {
-    protected static final int REQUEST_CODE_ASK_PERMISSIONS = 100;
-    protected static final int CONVERT_EBOOK_REQUEST = 200;
+    private static final int REQUEST_CODE_ASK_PERMISSIONS = 100;
+    private static final int CONVERT_EBOOK_REQUEST = 200;
     private String lastPath = "/sdcard";
 
     @Override
@@ -83,28 +83,31 @@ public class MainActivity extends AppCompatActivity {
             return;
 
         if (requestCode == CONVERT_EBOOK_REQUEST) {
-            String fileName = data.getStringExtra(GenericFileDialog.RESULT_PATH);
-            if (fileName != null) {
-                Lt.d("Selected: " + fileName);
-                lastPath = new File(fileName).getParent();
-                String outName = fileName + ".epub";
+            String inName = data.getStringExtra(GenericFileDialog.RESULT_PATH);
+            if (inName != null) {
+                Lt.d("Selected: " + inName);
+                lastPath = new File(inName).getParent();
+                String outName = inName + ".epub";
                 int ret;
-                if (isMobi(fileName)) {
-                    ret = ConvLib.mobiToEpubNative(fileName, outName);
+                if (isMobi(inName)) {
+                    ret = ConvLib.mobiToEpubNative(inName, outName);
                 }
-                else if (isFb2(fileName)) {
-                    String cssDir = getFilesDir().getAbsolutePath() + "/css";
-                    copyAssetDir("css", cssDir);
-                    ret = ConvLib.fb2ToEpubNative(fileName, outName, cssDir, "");
+                else if (isFb2(inName)) {
+                    FB2Converter converter = new FB2Converter();
+                    try {
+                        converter.convert(inName, outName);
+                        ret = 0;
+                    } catch (Exception e) {
+                        ret = 1;
+                    }
                 }
                 else {
-                    ret = -9999;
+                    ret = -1;
                 }
                 String msg;
                 if (ret == 0) {
                     msg = getString(R.string.conv_success) + outName;
                 } else if (ret > -9999) {
-                    // TODO: need meaningful error messages from the conversion libraries...
                     msg = getString(R.string.conv_error);
                 } else {
                     msg = getString(R.string.unknown_file);
@@ -140,50 +143,6 @@ public class MainActivity extends AppCompatActivity {
             return ".fb2".equals(ext);
         }
         return false;
-    }
-
-    private int copyAssetDir(String assetDirName, String targetDir) {
-        AssetManager assetManager = getAssets();
-        String[] list;
-        try {
-            list = assetManager.list(assetDirName);
-            if (list == null || list.length == 0)
-                return 0;
-        } catch(IOException e1) {
-            return 0;
-        }
-        int numFilesCopied = 0;
-        for (String assetName : list) {
-            String nameWithPath = assetDirName + "/" + assetName;
-            InputStream in;
-            OutputStream out;
-            try {
-                in = assetManager.open(nameWithPath);
-                // ... proceed to copy it
-                String targetName = targetDir + "/" + assetName;
-                new File(targetName).getParentFile().mkdirs(); // just in case, create the directory.
-                out = new FileOutputStream(targetName);
-                copyFile(in, out);
-                in.close();
-                out.flush();
-                out.close();
-                numFilesCopied++;
-            } catch (IOException e2) {
-                // Maybe assetName a directory?
-                numFilesCopied += copyAssetDir(nameWithPath, targetDir + "/" + assetName);
-            }
-        }
-        return numFilesCopied;
-    }
-
-    private static void copyFile(InputStream in, OutputStream out) throws IOException {
-        byte[] buffer = new byte[1024];
-        int read;
-        while ((read = in.read(buffer)) != -1)
-        {
-            out.write(buffer, 0, read);
-        }
-        out.flush();
     }
 
     private void checkPermissions() {

@@ -20,7 +20,7 @@ import android.content.Context;
 import android.content.pm.ApplicationInfo;
 import android.util.Log;
 
-public class Lt {
+class Lt {
 //    private static String myPackageName;
 //    private static PackageManager myPackageManager;
     private static ApplicationInfo myAppInfo;
