@@ -7,6 +7,7 @@ import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.os.Bundle;
+import android.os.Environment;
 import android.support.annotation.NonNull;
 import android.support.design.widget.FloatingActionButton;
 import android.support.design.widget.Snackbar;
@@ -19,6 +20,8 @@ import android.view.MenuItem;
 import android.view.View;
 
 import com.adobe.dp.fb2.convert.FB2Converter;
+import com.adobe.dp.office.conv.DOCXConverter;
+import com.adobe.dp.office.conv.RTFConverter;
 import com.ebookconvlibrary.ConvLib;
 
 import java.io.File;
@@ -26,7 +29,7 @@ import java.io.File;
 public class MainActivity extends AppCompatActivity {
     private static final int REQUEST_CODE_ASK_PERMISSIONS = 100;
     private static final int CONVERT_EBOOK_REQUEST = 200;
-    private String lastPath = "/sdcard";
+    private String lastPath;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -34,6 +37,8 @@ public class MainActivity extends AppCompatActivity {
         setContentView(R.layout.activity_main);
         Toolbar toolbar = findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
+
+        lastPath = Environment.getExternalStorageDirectory().getPath();
 
         FloatingActionButton fab = findViewById(R.id.fab);
         fab.setOnClickListener(new View.OnClickListener() {
@@ -44,7 +49,7 @@ public class MainActivity extends AppCompatActivity {
                 intent.putExtra(GenericFileDialog.SELECTION_MODE, GenericFileDialog.MODE_OPEN);
                 intent.putExtra(GenericFileDialog.SET_TITLE_TEXT, getString(R.string.sel_eb_file));
                 intent.putExtra(GenericFileDialog.FORMAT_FILTER, new String[] {
-                        "mobi","prc","azw","azw3","kf8","fb2","fb2.zip"
+                        "mobi", "prc", "azw", "azw3", "kf8", "fb2", "fb2.zip", "docx", "rtf"
                 });
                 startActivityForResult(intent, CONVERT_EBOOK_REQUEST);
             }
@@ -91,17 +96,31 @@ public class MainActivity extends AppCompatActivity {
                 int ret;
                 if (isMobi(inName)) {
                     ret = ConvLib.mobiToEpubNative(inName, outName);
-                }
-                else if (isFb2(inName)) {
-                    FB2Converter converter = new FB2Converter();
+                } else if (isFb2(inName)) {
                     try {
-                        converter.convert(inName, outName);
+                        FB2Converter.convert(inName, outName);
                         ret = 0;
                     } catch (Exception e) {
+                        e.printStackTrace();
                         ret = 1;
                     }
-                }
-                else {
+                } else if (isDocx(inName)) {
+                    try {
+                        DOCXConverter.convert(inName, outName);
+                        ret = 0;
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                        ret = 1;
+                    }
+                } else if (isRtf(inName)) {
+                    try {
+                        RTFConverter.convert(inName, outName);
+                        ret = 0;
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                        ret = 1;
+                    }
+                } else {
                     ret = -1;
                 }
                 String msg;
@@ -116,6 +135,22 @@ public class MainActivity extends AppCompatActivity {
                         .setAction("Action", null).show();
             }
         }
+    }
+
+    private boolean isRtf(String fileName) {
+        if (fileName == null) {
+            return false;
+        }
+        String lowerCaseName = fileName.toLowerCase();
+        return lowerCaseName.endsWith(".rtf");
+    }
+
+    private boolean isDocx(String fileName) {
+        if (fileName == null) {
+            return false;
+        }
+        String lowerCaseName = fileName.toLowerCase();
+        return lowerCaseName.endsWith(".docx");
     }
 
     private boolean isMobi(String fileName) {

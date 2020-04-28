@@ -35,7 +35,6 @@ import com.adobe.dp.css.CSSLength;
 import com.adobe.dp.css.CSSName;
 import com.adobe.dp.css.CSSNumber;
 import com.adobe.dp.css.CSSParser;
-import com.adobe.dp.css.CSSParsingError;
 import com.adobe.dp.css.CSSQuotedString;
 import com.adobe.dp.css.CSSStylesheet;
 import com.adobe.dp.css.CSSValue;
@@ -135,29 +134,19 @@ public class FB2Converter {
 
 	private FontLocator defaultFontLocator;
 
-	private static CSSStylesheet defaultStylesheet;
+	private CSSStylesheet defaultStylesheet;
 
 	private PrintWriter log = new PrintWriter(new OutputStreamWriter(System.out));
 
-	// static FontLocator builtInFontLocator = new BuiltInFontLocator();
-
-	static float[] titleFontSizes = { 2.2f, 1.8f, 1.5f, 1.3f, 1.2f, 1.1f, 1.0f };
-
-	static {
+	public FB2Converter() {
 		try {
-			InputStream in = FB2Converter.class.getResourceAsStream("stylesheet.css");
-			CSSParser parser = new CSSParser();
-			defaultStylesheet = parser.readStylesheet(in);
-			in.close();
-			Iterator errs = parser.errors();
-			if (errs != null) {
-				while (errs.hasNext()) {
-					CSSParsingError err = (CSSParsingError) errs.next();
-					System.err.println(err.getLine() + ": " + err.getError());
-				}
+			try (InputStream in = FB2Converter.class.getResourceAsStream("/com/adobe/dp/fb2/convert/stylesheet.css")) {
+				CSSParser parser = new CSSParser();
+				defaultStylesheet = parser.readStylesheet(in);
 			}
 		} catch (Exception e) {
 			e.printStackTrace();
+			defaultStylesheet = new CSSStylesheet();
 		}
 	}
 
@@ -688,8 +677,8 @@ public class FB2Converter {
 		epub.addMetadata(null, "FB2EPUB.version", Version.VERSION);
 		epub.addMetadata(null, "FB2EPUB.conversionDate", StringUtil.dateToW3CDTF(new Date()));
 		epub.generateStyles(styles);
-		// pass some large number, should split along where marked
-		epub.splitLargeChapters(2000000);
+
+		epub.splitLargeChapters(50000);
 	}
 
 	private void embedFonts() {
@@ -702,24 +691,18 @@ public class FB2Converter {
 		convert();
 	}
 
+	public static void convert(String inputPath, String outputPath) throws IOException, FB2FormatException {
+		FB2Converter converter = new FB2Converter();
 
-	public void convert(String inputPath, String outputPath) throws IOException, FB2FormatException {
-		InputStream cssInputStream = getClass().getResourceAsStream("/com/adobe/dp/fb2/convert/stylesheet.css");
-		if (cssInputStream != null) {
-			CSSParser parser = new CSSParser();
-			defaultStylesheet = parser.readStylesheet(cssInputStream);
-		}
-
-		FB2Document doc;
+		FB2Document fb2;
 		try (InputStream fb2in = new FileInputStream(inputPath)) {
-			doc = new FB2Document(fb2in);
+			fb2 = new FB2Document(fb2in);
 		}
 
 		OutputStream epubOut = new FileOutputStream(outputPath);
 		try (OCFContainerWriter container = new OCFContainerWriter(epubOut)) {
 			Publication epub = new Publication();
-			convert(doc, epub);
-			embedFonts();
+			converter.convert(fb2, epub);
 			epub.serialize(container);
 		}
 	}

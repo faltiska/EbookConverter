@@ -51,7 +51,7 @@ import java.io.PrintWriter;
 import java.util.Hashtable;
 import java.util.Iterator;
 
-class VMLConverter {
+public class VMLConverter {
 
 	private Publication epub;
 

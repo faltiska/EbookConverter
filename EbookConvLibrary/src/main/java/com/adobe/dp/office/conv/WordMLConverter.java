@@ -97,7 +97,7 @@ import java.util.StringTokenizer;
 import javax.xml.parsers.SAXParser;
 import javax.xml.parsers.SAXParserFactory;
 
-class WordMLConverter {
+public class WordMLConverter {
 
 	private final StyleConverter styleConverter;
 

@@ -39,12 +39,13 @@ import com.adobe.dp.css.Selector;
 import com.adobe.dp.css.SelectorRule;
 import com.adobe.dp.epub.conv.Version;
 import com.adobe.dp.epub.io.ContainerSource;
-import com.adobe.dp.epub.opf.NCXResource;
+import com.adobe.dp.epub.io.OCFContainerWriter;
 import com.adobe.dp.epub.opf.OPSResource;
 import com.adobe.dp.epub.opf.Publication;
 import com.adobe.dp.epub.opf.StyleResource;
 import com.adobe.dp.epub.otf.FontEmbeddingReport;
 import com.adobe.dp.epub.style.Stylesheet;
+import com.adobe.dp.fb2.FB2FormatException;
 import com.adobe.dp.office.word.BodyElement;
 import com.adobe.dp.office.word.MetadataItem;
 import com.adobe.dp.office.word.RunProperties;
@@ -53,19 +54,21 @@ import com.adobe.dp.office.word.WordDocument;
 import com.adobe.dp.otf.FontLocator;
 import com.adobe.dp.xml.util.StringUtil;
 
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.OutputStream;
 import java.io.OutputStreamWriter;
 import java.io.PrintWriter;
 import java.util.Date;
 import java.util.Hashtable;
 import java.util.Iterator;
 
-class DOCXConverter {
+public class DOCXConverter {
 
 	private final WordDocument doc;
 
 	private final Publication epub;
-
-	private final NCXResource toc;
 
 	private final StyleResource global;
 
@@ -73,8 +76,6 @@ class DOCXConverter {
 
 	// maps Footnote IDs to Footnote XRef
     private final Hashtable footnoteMap = new Hashtable();
-
-	Hashtable convResources = new Hashtable();
 
 	private ContainerSource wordResources;
 
@@ -96,7 +97,6 @@ class DOCXConverter {
 		Stylesheet globalStylesheet = global.getStylesheet();
 
 		styleConverter = new StyleConverter(false);
-		toc = epub.getTOC();
 
 		Style rs = doc.getDefaultParagraphStyle();
 		if (rs != null) {
@@ -166,7 +166,6 @@ class DOCXConverter {
 	}
 
 	public void convert() {
-
 		OPSResource footnotes = null;
 		if (doc.getFootnotes() != null) {
 			// process footnotes first to build footnote map
@@ -252,4 +251,15 @@ class DOCXConverter {
 		wordResources = source;
 	}
 
+	public static void convert(String inputPath, String outputPath) throws IOException, FB2FormatException {
+		WordDocument doc = new WordDocument(new File(inputPath));
+
+		OutputStream epubOut = new FileOutputStream(outputPath);
+		try (OCFContainerWriter container = new OCFContainerWriter(epubOut)) {
+			Publication epub = new Publication();
+			DOCXConverter converter = new DOCXConverter(doc, epub);
+			converter.convert();
+			epub.serialize(container);
+		}
+	}
 }

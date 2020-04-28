@@ -45,7 +45,7 @@ public class RTFDocument {
 	RTFDocument() {
 	}
 
-	private RTFDocument(File file) throws IOException {
+	public RTFDocument(File file) throws IOException {
 		RTFDocumentParser parser = new RTFDocumentParser(file);
 		parser.doc = this;
 		parser.parseInternal();

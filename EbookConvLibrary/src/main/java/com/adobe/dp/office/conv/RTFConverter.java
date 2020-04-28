@@ -39,6 +39,7 @@ import com.adobe.dp.css.Selector;
 import com.adobe.dp.css.SelectorRule;
 import com.adobe.dp.epub.io.BufferedDataSource;
 import com.adobe.dp.epub.io.DataSource;
+import com.adobe.dp.epub.io.OCFContainerWriter;
 import com.adobe.dp.epub.io.StringDataSource;
 import com.adobe.dp.epub.opf.OPSResource;
 import com.adobe.dp.epub.opf.Publication;
@@ -61,7 +62,10 @@ import com.adobe.dp.office.rtf.RTFStyle;
 import com.adobe.dp.otf.FontLocator;
 
 import java.io.ByteArrayInputStream;
+import java.io.File;
+import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.OutputStream;
 import java.io.OutputStreamWriter;
 import java.io.PrintWriter;
 import java.util.HashSet;
@@ -459,5 +463,18 @@ public class RTFConverter {
 
 	public void setLog(PrintWriter log) {
 		this.log = log;
+	}
+
+
+	public static void convert(String inputPath, String outputPath) throws IOException {
+		RTFDocument doc = new RTFDocument(new File(inputPath));
+
+		OutputStream epubOut = new FileOutputStream(outputPath);
+		try (OCFContainerWriter container = new OCFContainerWriter(epubOut)) {
+			Publication epub = new Publication();
+			RTFConverter converter = new RTFConverter(doc, epub);
+			converter.convert();
+			epub.serialize(container);
+		}
 	}
 }
