@@ -3,7 +3,7 @@ package com.ebookconvlibrary;
 /**
  * Created by greg on 1/6/2016.
  */
-public class ConvLib {
+class ConvLib {
     static {
         System.loadLibrary("c++_shared");
         System.loadLibrary("EbookConv");

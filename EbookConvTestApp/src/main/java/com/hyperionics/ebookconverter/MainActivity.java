@@ -22,7 +22,7 @@ import android.view.View;
 import com.adobe.dp.fb2.convert.FB2Converter;
 import com.adobe.dp.office.conv.DOCXConverter;
 import com.adobe.dp.office.conv.RTFConverter;
-import com.ebookconvlibrary.ConvLib;
+import com.ebookconvlibrary.MOBIConverter;
 
 import java.io.File;
 
@@ -93,46 +93,24 @@ public class MainActivity extends AppCompatActivity {
                 Lt.d("Selected: " + inName);
                 lastPath = new File(inName).getParent();
                 String outName = inName + ".epub";
-                int ret;
-                if (isMobi(inName)) {
-                    ret = ConvLib.mobiToEpubNative(inName, outName);
-                } else if (isFb2(inName)) {
-                    try {
+
+                int msg = R.string.conv_success;
+                try {
+                    if (isMobi(inName)) {
+                        MOBIConverter.convert(inName, outName);
+                    } else if (isFb2(inName)) {
                         FB2Converter.convert(inName, outName);
-                        ret = 0;
-                    } catch (Exception e) {
-                        e.printStackTrace();
-                        ret = 1;
-                    }
-                } else if (isDocx(inName)) {
-                    try {
+                    } else if (isDocx(inName)) {
                         DOCXConverter.convert(inName, outName);
-                        ret = 0;
-                    } catch (Exception e) {
-                        e.printStackTrace();
-                        ret = 1;
-                    }
-                } else if (isRtf(inName)) {
-                    try {
+                    } else if (isRtf(inName)) {
                         RTFConverter.convert(inName, outName);
-                        ret = 0;
-                    } catch (Exception e) {
-                        e.printStackTrace();
-                        ret = 1;
+                    } else {
+                        msg = R.string.unknown_file;
                     }
-                } else {
-                    ret = -1;
+                } catch (Exception e) {
+                    msg = R.string.conv_error;
                 }
-                String msg;
-                if (ret == 0) {
-                    msg = getString(R.string.conv_success) + outName;
-                } else if (ret > -9999) {
-                    msg = getString(R.string.conv_error);
-                } else {
-                    msg = getString(R.string.unknown_file);
-                }
-                Snackbar.make(findViewById(R.id.fab), msg, Snackbar.LENGTH_LONG)
-                        .setAction("Action", null).show();
+                Snackbar.make(findViewById(R.id.fab), msg, Snackbar.LENGTH_LONG).setAction("Action", null).show();
             }
         }
     }
