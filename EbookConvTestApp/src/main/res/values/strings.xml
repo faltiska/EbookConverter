@@ -31,7 +31,7 @@ This small app is a demo of open source ebook conversion libraries, mainly for t
     <string name="close_app">Close app</string>
     <string name="perm_granted">Permission granted, thank you!</string>
     <string name="sel_eb_file">Select ebook to convert</string>
-    <string name="conv_success">Conversion succesfull, saved file: </string>
-    <string name="conv_error">Conversion error, no file saved.</string>
-    <string name="unknown_file">Error: unknown file type selected.</string>
+    <string name="conv_success">Conversion succesfull.</string>
+    <string name="conv_error">Conversion error.</string>
+    <string name="unknown_file">Unknown input file type.</string>
 </resources>
