@@ -1477,7 +1477,15 @@ MOBI_RET mobi_xml_write_manifest(xmlTextWriterPtr writer, const MOBIRawml *rawml
         MOBIPart *curr = rawml->resources;
         while (curr != NULL) {
             MOBIFileMeta file_meta = mobi_get_filemeta_by_type(curr->type);
-            snprintf(href, sizeof(href), "resource%05zu.%s", curr->uid, file_meta.extension);
+            if (curr->type != T_NCX) {
+                snprintf(href, sizeof(href), "resource%05zu.%s", curr->uid, file_meta.extension);
+            } else {
+                //the href attribute was something like resource0005.ncx but
+                //the toc file in the archive was called toc.ncx
+                //so the epub readers were not finding the file and
+                //were not able to show the table of content
+                snprintf(href, sizeof(href), "toc.ncx");
+            }
             snprintf(id, sizeof(id), "resource%05zu", curr->uid);
             MOBI_RET ret = mobi_xml_write_item(writer, id, href, file_meta.mime_type);
             if (ret != MOBI_SUCCESS) {
