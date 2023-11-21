@@ -11,8 +11,8 @@ I've replaced it the java based converters from Adobe.
 
 I have added an IDEA project containing:
 - a new Android Library module
-- Greg's original Android app for testing the converster
-- the code java from Adobe to handle
+- Greg's original Android app for testing the converter
+- the java code from Adobe to handle other types except mobi
 
 The library builds all converters into an .aar archive you can include in your Android project.
 
