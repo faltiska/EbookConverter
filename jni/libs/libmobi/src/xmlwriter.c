@@ -145,9 +145,9 @@ static MOBI_RET mobi_xml_buffer_addstring(xmlTextWriterPtr writer, const char *s
         return MOBI_INIT_FAILED;
     }
     MOBIBuffer *buf = writer->xmlbuf->mobibuffer;
-    mobi_buffer_addstring(buf, string);
+    buffer_addstring(buf, string);
     if (buf->error == MOBI_BUFFER_END) {
-        mobi_buffer_resize(buf, buf->maxlen * 2);
+        buffer_resize(buf, buf->maxlen * 2);
         if (buf->error != MOBI_SUCCESS) {
             return buf->error;
         }
@@ -170,9 +170,9 @@ static MOBI_RET mobi_xml_buffer_addchar(xmlTextWriterPtr writer, const unsigned 
         return MOBI_INIT_FAILED;
     }
     MOBIBuffer *buf = writer->xmlbuf->mobibuffer;
-    mobi_buffer_add8(buf, c);
+    buffer_add8(buf, c);
     if (buf->error == MOBI_BUFFER_END) {
-        mobi_buffer_resize(buf, buf->maxlen * 2);
+        buffer_resize(buf, buf->maxlen * 2);
         if (buf->error != MOBI_SUCCESS) {
             return buf->error;
         }
@@ -370,7 +370,7 @@ xmlBufferPtr xmlBufferCreate(void) {
         return NULL;
     }
     unsigned int size = MOBI_XML_BUFFERSIZE;
-    MOBIBuffer *buf = mobi_buffer_init(size);
+    MOBIBuffer *buf = buffer_init(size);
     if (buf == NULL) {
         free(xmlbuf);
         return NULL;
@@ -381,14 +381,12 @@ xmlBufferPtr xmlBufferCreate(void) {
 }
 
 /**
- @brief Free XML buffer
- 
- @param[in,out] buf XML buffer
- */
+ @brief Free xml buffer
+  */
 void xmlBufferFree(xmlBufferPtr buf) {
     if (buf == NULL) { return; }
     if (buf->mobibuffer != NULL) {
-        mobi_buffer_free(buf->mobibuffer);
+        buffer_free(buf->mobibuffer);
     }
     free(buf);
 }
@@ -878,7 +876,7 @@ int xmlTextWriterWriteString(xmlTextWriterPtr writer, const xmlChar *content) {
             ret = mobi_xml_buffer_addstring(writer, ">");
             if (ret != MOBI_SUCCESS) { return XML_ERROR; }
             state->mode = MOBI_XMLMODE_TEXT;
-            /* fallthrough */
+            /* falltrough */
         case MOBI_XMLMODE_TEXT:
             ret = mobi_xml_buffer_addencoded(writer, (const char *) content);
             if (writer->indent_enable) {

@@ -1,7 +1,7 @@
 /** @file parse_rawml.c
  *  @brief Functions for parsing rawml markup
  *
- * Copyright (c) 2020 Bartek Fabiszewski
+ * Copyright (c) 2014 Bartek Fabiszewski
  * http://www.fabiszewski.net
  *
  * This file is part of libmobi.
@@ -107,7 +107,7 @@ MOBI_RET mobi_search_links_kf7(MOBIResult *result, const unsigned char *data_sta
                     result->value[i++] = (char) *data++;
                 }
                 /* self closing tag '/>' */
-                if (data <= data_end && *(data - 1) == '/' && *data == '>') {
+                if (*(data - 1) == '/' && *data == '>') {
                     --data; --i;
                 }
                 result->end = data;
@@ -182,7 +182,7 @@ MOBI_RET mobi_find_attrvalue(MOBIResult *result, const unsigned char *data_start
                 result->value[i++] = (char) *data++;
             }
             /* self closing tag '/>' */
-            if (data <= data_end && *(data - 1) == '/' && *data == '>') {
+            if (*(data - 1) == '/' && *data == '>') {
                 --data; --i;
             }
             result->end = data;
@@ -354,7 +354,7 @@ size_t mobi_get_attribute_value(char *value, const unsigned char *data, const si
                 length--;
             }
             /* self closing tag '/>' */
-            if (length && *(data - 1) == '/' && *data == '>') {
+            if (*(data - 1) == '/' && *data == '>') {
                 value--;
             }
             *value = '\0';
@@ -468,15 +468,14 @@ MOBI_RET mobi_get_aid_by_offset(char *aid, const MOBIPart *html, const size_t of
 }
 
 /**
- @brief Get value of the closest "id" or "name" attribute following given offset in a given part
+ @brief Get value of the closest "id" attribute following given offset in a given part
  
- @param[in,out] id String value of found attribute
+ @param[in,out] id String value of "id" attribute
  @param[in] html MOBIPart html part
  @param[in] offset Offset from the beginning of the part data
- @param[in,out] pref_attr Preferred attribute to link to (id or name)
  @return MOBI_RET status code (on success MOBI_SUCCESS)
  */
-MOBI_RET mobi_get_id_by_offset(char *id, const MOBIPart *html, const size_t offset, MOBIAttrType *pref_attr) {
+MOBI_RET mobi_get_id_by_offset(char *id, const MOBIPart *html, const size_t offset) {
     if (!id || !html) {
         debug_print("Parameter error (id (%p), html (%p)\n", (void *) id, (void *) html);
         return MOBI_PARAM_ERR;
@@ -488,21 +487,13 @@ MOBI_RET mobi_get_id_by_offset(char *id, const MOBIPart *html, const size_t offs
     const unsigned char *data = html->data;
     data += offset;
     size_t length = html->size - offset;
-    static const char * attributes[] = {
-        [ATTR_ID] = "id",
-        [ATTR_NAME] = "name",
-    };
-    size_t off = mobi_get_attribute_value(id, data, length, attributes[*pref_attr], true);
+    
+    size_t off = mobi_get_attribute_value(id, data, length, "id", true);
     if (off == SIZE_MAX) {
-        // try optional attribute
-        const MOBIAttrType opt_attr = (*pref_attr == ATTR_ID) ? ATTR_NAME : ATTR_ID;
-        off = mobi_get_attribute_value(id, data, length, attributes[opt_attr], true);
-        if (off == SIZE_MAX) {
-            id[0] = '\0';
-        } else {
-            // save optional attribute as preferred
-            *pref_attr = opt_attr;
-        }
+		off = mobi_get_attribute_value(id, data, length, "name", true); // GKochaniak, added this and next line below
+		if (off == SIZE_MAX)
+	        id[0] = '\0';
+        //return MOBI_DATA_CORRUPT;
     }
     return MOBI_SUCCESS;
 }
@@ -542,10 +533,9 @@ MOBI_RET mobi_get_aid_by_posoff(uint32_t *file_number, char *aid, const MOBIRawm
  @param[in] rawml MOBIRawml parsed records structure
  @param[in] pos_fid X value of pos:fid:x
  @param[in] pos_off Y value of off:y
- @param[in,out] pref_attr Attribute to link to
  @return MOBI_RET status code (on success MOBI_SUCCESS)
  */
-MOBI_RET mobi_get_id_by_posoff(uint32_t *file_number, char *id, const MOBIRawml *rawml, const size_t pos_fid, const size_t pos_off, MOBIAttrType *pref_attr) {
+MOBI_RET mobi_get_id_by_posoff(uint32_t *file_number, char *id, const MOBIRawml *rawml, const size_t pos_fid, const size_t pos_off) {
     size_t offset;
     MOBI_RET ret = mobi_get_offset_by_posoff(file_number, &offset, rawml, pos_fid, pos_off);
     if (ret != MOBI_SUCCESS) {
@@ -555,7 +545,17 @@ MOBI_RET mobi_get_id_by_posoff(uint32_t *file_number, char *id, const MOBIRawml 
     if (html == NULL) {
         return MOBI_DATA_CORRUPT;
     }
-    ret = mobi_get_id_by_offset(id, html, offset, pref_attr);
+#if defined(_DEBUG) && defined(_WIN32) // GKochaniak, for debugging
+	// write html to temp file
+	char fname[256];
+	sprintf(fname, "C:\\tmp\\html_%02d.html", *file_number);
+	FILE *fpTmp = fopen(fname, "wb");
+	if (fpTmp) {
+		fwrite(html->data, 1, html->size, fpTmp);
+		fclose(fpTmp);
+	}
+#endif
+    ret = mobi_get_id_by_offset(id, html, offset);
     if (ret != MOBI_SUCCESS) {
         return MOBI_DATA_CORRUPT;
     }
@@ -650,23 +650,23 @@ MOBI_RET mobi_reconstruct_resources(const MOBIData *m, MOBIRawml *rawml) {
  */
 MOBI_RET mobi_process_replica(unsigned char *pdf, const char *text, size_t *length) {
     MOBI_RET ret = MOBI_SUCCESS;
-    MOBIBuffer *buf = mobi_buffer_init_null((unsigned char*) text, *length);
+    MOBIBuffer *buf = buffer_init_null((unsigned char*) text, *length);
     if (buf == NULL) {
         debug_print("%s\n", "Memory allocation failed");
         return MOBI_MALLOC_FAILED;
     }
-    mobi_buffer_setpos(buf, 12);
-    size_t pdf_offset = mobi_buffer_get32(buf); /* offset 12 */
-    size_t pdf_length = mobi_buffer_get32(buf); /* 16 */
+    buffer_setpos(buf, 12);
+    size_t pdf_offset = buffer_get32(buf); /* offset 12 */
+    size_t pdf_length = buffer_get32(buf); /* 16 */
     if (pdf_length > *length) {
         debug_print("PDF size from replica header too large: %zu", pdf_length);
-        mobi_buffer_free_null(buf);
+        buffer_free_null(buf);
         return MOBI_DATA_CORRUPT;
     }
-    mobi_buffer_setpos(buf, pdf_offset);
-    mobi_buffer_getraw(pdf, buf, pdf_length);
+    buffer_setpos(buf, pdf_offset);
+    buffer_getraw(pdf, buf, pdf_length);
     ret = buf->error;
-    mobi_buffer_free_null(buf);
+    buffer_free_null(buf);
     *length = pdf_length;
     return ret;
 }
@@ -788,7 +788,7 @@ MOBI_RET mobi_reconstruct_parts(MOBIRawml *rawml) {
         return MOBI_INIT_FAILED;
     }
     /* take first part, xhtml */
-    MOBIBuffer *buf = mobi_buffer_init_null(rawml->flow->data, rawml->flow->size);
+    MOBIBuffer *buf = buffer_init_null(rawml->flow->data, rawml->flow->size);
     if (buf == NULL) {
         debug_print("%s\n", "Memory allocation failed");
         return MOBI_MALLOC_FAILED;
@@ -796,16 +796,16 @@ MOBI_RET mobi_reconstruct_parts(MOBIRawml *rawml) {
     rawml->markup = calloc(1, sizeof(MOBIPart));
     if (rawml->markup == NULL) {
         debug_print("%s", "Memory allocation for markup part failed\n");
-        mobi_buffer_free_null(buf);
+        buffer_free_null(buf);
         return MOBI_MALLOC_FAILED;
     }
     MOBIPart *curr = rawml->markup;
     /* not skeleton data, just copy whole part to markup */
-    if (rawml->skel == NULL || rawml->skel->entries_count == 0) {
+    if (rawml->skel == NULL) {
         unsigned char *data = malloc(buf->maxlen);
         if (data == NULL) {
             debug_print("%s", "Memory allocation failed\n");
-            mobi_buffer_free_null(buf);
+            buffer_free_null(buf);
             return MOBI_MALLOC_FAILED;
         }
         memcpy(data, buf->data, buf->maxlen);
@@ -814,17 +814,11 @@ MOBI_RET mobi_reconstruct_parts(MOBIRawml *rawml) {
         curr->data = data;
         curr->type = rawml->flow->type;
         curr->next = NULL;
-        mobi_buffer_free_null(buf);
+        buffer_free_null(buf);
         return MOBI_SUCCESS;
     }
-    if (rawml->frag == NULL) {
-        debug_print("%s", "Missing frag part\n");
-        mobi_buffer_free_null(buf);
-        return MOBI_DATA_CORRUPT;
-    }
     /* parse skeleton data */
-    size_t i = 0;
-    size_t j = 0;
+    size_t i = 0, j = 0;
     size_t curr_position = 0;
     size_t total_fragments_count = rawml->frag->total_entries_count;
     while (i < rawml->skel->entries_count) {
@@ -832,64 +826,58 @@ MOBI_RET mobi_reconstruct_parts(MOBIRawml *rawml) {
         uint32_t fragments_count;
         ret = mobi_get_indxentry_tagvalue(&fragments_count, entry, INDX_TAG_SKEL_COUNT);
         if (ret != MOBI_SUCCESS) {
-            mobi_buffer_free_null(buf);
+            buffer_free_null(buf);
             return ret;
         }
         if (fragments_count > total_fragments_count) {
             debug_print("%s", "Wrong count of fragments\n");
-            mobi_buffer_free_null(buf);
+            buffer_free_null(buf);
             return MOBI_DATA_CORRUPT;
         }
         total_fragments_count -= fragments_count;
         uint32_t skel_position;
         ret = mobi_get_indxentry_tagvalue(&skel_position, entry, INDX_TAG_SKEL_POSITION);
         if (ret != MOBI_SUCCESS) {
-            mobi_buffer_free_null(buf);
+            buffer_free_null(buf);
             return ret;
         }
         uint32_t skel_length;
         ret = mobi_get_indxentry_tagvalue(&skel_length, entry, INDX_TAG_SKEL_LENGTH);
         if (ret != MOBI_SUCCESS || skel_position + skel_length > buf->maxlen) {
-            mobi_buffer_free_null(buf);
+            buffer_free_null(buf);
             return MOBI_DATA_CORRUPT;
         }
         debug_print("%zu\t%s\t%i\t%i\t%i\n", i, entry->label, fragments_count, skel_position, skel_length);
-        mobi_buffer_setpos(buf, skel_position);
+        buffer_setpos(buf, skel_position);
         
-        unsigned char *frag_buffer = mobi_buffer_getpointer(buf, skel_length);
-        if (frag_buffer == NULL) {
-            debug_print("%s\n", "Fragment data beyond buffer");
-            mobi_buffer_free_null(buf);
-            return MOBI_DATA_CORRUPT;
-        }
-        MOBIFragment *first_fragment = mobi_list_add(NULL, 0, frag_buffer, skel_length, false);
+        MOBIFragment *first_fragment = mobi_list_add(NULL, 0, buffer_getpointer(buf, skel_length), skel_length, false);
         MOBIFragment *current_fragment = first_fragment;
         while (fragments_count--) {
             entry = &rawml->frag->entries[j];
             uint32_t insert_position = (uint32_t) strtoul(entry->label, NULL, 10);
             if (insert_position < curr_position) {
                 debug_print("Insert position (%u) before part start (%zu)\n", insert_position, curr_position);
-                mobi_buffer_free_null(buf);
+                buffer_free_null(buf);
                 mobi_list_del_all(first_fragment);
                 return MOBI_DATA_CORRUPT;
             }
             uint32_t file_number;
             ret = mobi_get_indxentry_tagvalue(&file_number, entry, INDX_TAG_FRAG_FILE_NR);
             if (ret != MOBI_SUCCESS) {
-                mobi_buffer_free_null(buf);
+                buffer_free_null(buf);
                 mobi_list_del_all(first_fragment);
                 return ret;
             }
             if (file_number != i) {
                 debug_print("%s", "SKEL part number and fragment sequence number don't match\n");
-                mobi_buffer_free_null(buf);
+                buffer_free_null(buf);
                 mobi_list_del_all(first_fragment);
                 return MOBI_DATA_CORRUPT;
             }
             uint32_t frag_length;
             ret = mobi_get_indxentry_tagvalue(&frag_length, entry, INDX_TAG_FRAG_LENGTH);
             if (ret != MOBI_SUCCESS) {
-                mobi_buffer_free_null(buf);
+                buffer_free_null(buf);
                 mobi_list_del_all(first_fragment);
                 return ret;
             }
@@ -898,28 +886,28 @@ MOBI_RET mobi_reconstruct_parts(MOBIRawml *rawml) {
             uint32_t seq_number;
             ret = mobi_get_indxentry_tagvalue(&seq_number, entry, INDX_TAG_FRAG_SEQUENCE_NR);
             if (ret != MOBI_SUCCESS) {
-                mobi_buffer_free_null(buf);
+                buffer_free_null(buf);
                 mobi_list_del_all(first_fragment);
                 return ret;
             }
             uint32_t frag_position;
             ret = mobi_get_indxentry_tagvalue(&frag_position, entry, INDX_TAG_FRAG_POSITION);
             if (ret != MOBI_SUCCESS) {
-                mobi_buffer_free_null(buf);
+                buffer_free_null(buf);
                 mobi_list_del_all(first_fragment);
                 return ret;
             }
             uint32_t cncx_offset;
             ret = mobi_get_indxentry_tagvalue(&cncx_offset, entry, INDX_TAG_FRAG_AID_CNCX);
             if (ret != MOBI_SUCCESS) {
-                mobi_buffer_free_null(buf);
+                buffer_free_null(buf);
                 mobi_list_del_all(first_fragment);
                 return ret;
             }
             const MOBIPdbRecord *cncx_record = rawml->frag->cncx_record;
             char *aid_text = mobi_get_cncx_string(cncx_record, cncx_offset);
             if (aid_text == NULL) {
-                mobi_buffer_free_null(buf);
+                buffer_free_null(buf);
                 debug_print("%s\n", "Memory allocation failed");
                 mobi_list_del_all(first_fragment);
                 return MOBI_MALLOC_FAILED;
@@ -937,32 +925,21 @@ MOBI_RET mobi_reconstruct_parts(MOBIRawml *rawml) {
             }
             skel_length += frag_length;
             
-            frag_buffer = mobi_buffer_getpointer(buf, frag_length);
-            if (frag_buffer == NULL) {
-                debug_print("%s\n", "Fragment data beyond buffer");
-                mobi_buffer_free_null(buf);
-                mobi_list_del_all(first_fragment);
-                return MOBI_DATA_CORRUPT;
-            }
-            current_fragment = mobi_list_insert(current_fragment, insert_position, frag_buffer, frag_length, false, insert_position);
+            current_fragment = mobi_list_insert(current_fragment, insert_position, buffer_getpointer(buf, frag_length), frag_length, false, insert_position);
             j++;
             
         }
         char *skel_text = malloc(skel_length);
         if (skel_text == NULL) {
             debug_print("%s", "Memory allocation for markup data failed\n");
-            mobi_buffer_free_null(buf);
+            buffer_free_null(buf);
             mobi_list_del_all(first_fragment);
             return MOBI_MALLOC_FAILED;
         }
         char *p = skel_text;
         while (first_fragment) {
-            if (first_fragment->fragment) {
-                memcpy(p, first_fragment->fragment, first_fragment->size);
-                p += first_fragment->size;
-            } else {
-                debug_print("Skipping broken fragment in part %zu\n", i);
-            }
+            memcpy(p, first_fragment->fragment, first_fragment->size);
+            p += first_fragment->size;
             first_fragment = mobi_list_del(first_fragment);
         }
         if (i > 0) {
@@ -970,7 +947,7 @@ MOBI_RET mobi_reconstruct_parts(MOBIRawml *rawml) {
             if (curr->next == NULL) {
                 debug_print("%s", "Memory allocation for markup part failed\n");
                 free(skel_text);
-                mobi_buffer_free_null(buf);
+                buffer_free_null(buf);
                 return MOBI_MALLOC_FAILED;
             }
             curr = curr->next;
@@ -983,7 +960,7 @@ MOBI_RET mobi_reconstruct_parts(MOBIRawml *rawml) {
         curr_position += skel_length;
         i++;
     }
-    mobi_buffer_free_null(buf);
+    buffer_free_null(buf);
     return MOBI_SUCCESS;
 }
 
@@ -1063,10 +1040,9 @@ MOBI_RET mobi_get_ncx_filepos_array(MOBIArray *links, const MOBIRawml *rawml) {
  @param[in,out] link Memory area which will be filled with "part00000.html#customid", including quotation marks
  @param[in] rawml Structure rawml
  @param[in] value String kindle:pos:fid:0000:off:0000000000, without quotation marks
- @param[in,out] pref_attr Preferred attribute to link to (id or name)
  @return MOBI_RET status code (on success MOBI_SUCCESS)
  */
-MOBI_RET mobi_posfid_to_link(char *link, const MOBIRawml *rawml, const char *value, MOBIAttrType *pref_attr) {
+MOBI_RET mobi_posfid_to_link(char *link, const MOBIRawml *rawml, const char *value) {
     /* "kindle:pos:fid:0000:off:0000000000" */
     /* extract fid and off */
     if (strlen(value) < (sizeof("kindle:pos:fid:0000:off:0000000000") - 1)) {
@@ -1089,8 +1065,7 @@ MOBI_RET mobi_posfid_to_link(char *link, const MOBIRawml *rawml, const char *val
     str_off[10] = '\0';
     
     /* get file number and id value */
-    uint32_t pos_off;
-    uint32_t pos_fid;
+    uint32_t pos_off, pos_fid;
     MOBI_RET ret = mobi_base32_decode(&pos_off, str_off);
     if (ret != MOBI_SUCCESS) {
         return ret;
@@ -1101,18 +1076,13 @@ MOBI_RET mobi_posfid_to_link(char *link, const MOBIRawml *rawml, const char *val
     }
     uint32_t part_id;
     char id[MOBI_ATTRVALUE_MAXSIZE + 1];
-    ret = mobi_get_id_by_posoff(&part_id, id, rawml, pos_fid, pos_off, pref_attr);
+    ret = mobi_get_id_by_posoff(&part_id, id, rawml, pos_fid, pos_off);
     if (ret != MOBI_SUCCESS) {
         return ret;
     }
     /* FIXME: pos_off == 0 means top of file? */
     if (pos_off) {
-        int n = snprintf(link, MOBI_ATTRVALUE_MAXSIZE + 1, "\"part%05u.html#%s\"", part_id, id);
-        if (n > MOBI_ATTRVALUE_MAXSIZE + 1) {
-            debug_print("Skipping truncated link: %s\n", link);
-            *link = '\0';
-            return MOBI_SUCCESS;
-       }
+        snprintf(link, MOBI_ATTRVALUE_MAXSIZE + 1, "\"part%05u.html#%s\"", part_id, id);
     } else {
         snprintf(link, MOBI_ATTRVALUE_MAXSIZE + 1, "\"part%05u.html\"", part_id);
     }
@@ -1224,18 +1194,12 @@ MOBI_RET mobi_reconstruct_links_kf8(const MOBIRawml *rawml) {
     for (i = 0; i < 2; i++) {
         MOBIPart *part = parts[i];
         while (part) {
-            if (part->data == NULL || part->size == 0) {
-                debug_print("Skipping empty part%s", "\n");
-                part = part->next;
-                continue;
-            }
             unsigned char *data_in = part->data;
             result.start = part->data;
             const unsigned char *data_end = part->data + part->size - 1;
             MOBIFragment *first = NULL;
             MOBIFragment *curr = NULL;
             size_t part_size = 0;
-            MOBIAttrType pref_attr = ATTR_ID;
             while (true) {
                 mobi_search_links_kf8(&result, result.start, data_end, part->type);
                 if (result.start == NULL) {
@@ -1253,8 +1217,8 @@ MOBI_RET mobi_reconstruct_links_kf8(const MOBIRawml *rawml) {
                 if ((target = strstr(value, "kindle:pos:fid:")) != NULL) {
                     /* "kindle:pos:fid:0001:off:0000000000" */
                     /* replace link with href="part00000.html#00" */
-                    /* FIXME: this requires present target id or name attribute */
-                    MOBI_RET ret = mobi_posfid_to_link(link, rawml, target, &pref_attr);
+                    /* FIXME: this requires present target id tag */
+                    MOBI_RET ret = mobi_posfid_to_link(link, rawml, target);
                     if (ret != MOBI_SUCCESS) {
                         mobi_list_del_all(first);
                         return ret;
@@ -1398,10 +1362,6 @@ MOBI_RET mobi_reconstruct_infl(char *outstring, const MOBIIndx *infl, const MOBI
     }
     for (size_t i = 0; i < infl_count; i++) {
         size_t offset = infl_groups[i];
-        if (offset >= infl->entries_count) {
-            debug_print("%s\n", "Invalid entry offset");
-            return MOBI_DATA_CORRUPT;
-        }
         uint32_t *groups;
         size_t group_cnt = mobi_get_indxentry_tagarray(&groups, &infl->entries[offset], INDX_TAGARR_INFL_GROUPS);
         uint32_t *parts;
@@ -1423,10 +1383,6 @@ MOBI_RET mobi_reconstruct_infl(char *outstring, const MOBIIndx *infl, const MOBI
             
             unsigned char decoded[INDX_INFLBUF_SIZEMAX + 1];
             memset(decoded, 0, INDX_INFLBUF_SIZEMAX + 1);
-            if (parts[j] >= infl->entries_count) {
-                debug_print("%s\n", "Invalid entry offset");
-                return MOBI_DATA_CORRUPT;
-            }
             unsigned char *rule = (unsigned char *) infl->entries[parts[j]].label;
             memcpy(decoded, label, label_length);
             int decoded_length = (int) label_length;
@@ -1437,11 +1393,7 @@ MOBI_RET mobi_reconstruct_infl(char *outstring, const MOBIIndx *infl, const MOBI
             if (decoded_length == 0) {
                 continue;
             }
-            int n = snprintf(infl_tag, INDX_INFLBUF_SIZEMAX, iform_tag, name_attr, decoded);
-            if (n > INDX_INFLBUF_SIZEMAX) {
-                debug_print("Skipping truncated tag: %s\n", infl_tag);
-                continue;
-            }
+            snprintf(infl_tag, INDX_INFLBUF_SIZEMAX, iform_tag, name_attr, decoded);
             outlen += strlen(infl_tag);
             if (outlen > INDX_INFLTAG_SIZEMAX) {
                 debug_print("Inflections text in %s too long (%zu)\n", label, outlen);
@@ -1497,13 +1449,9 @@ MOBI_RET mobi_reconstruct_infl_v1(char *outstring, MOBITrie * const infl_tree, c
             free(decoded);
             continue;
         }
-        int n = snprintf(infl_tag, INDX_INFLBUF_SIZEMAX, iform_tag, decoded);
+        snprintf(infl_tag, INDX_INFLBUF_SIZEMAX, iform_tag, decoded);
         /* allocated in mobi_trie_get_inflgroups() */
         free(decoded);
-        if (n > INDX_INFLBUF_SIZEMAX) {
-            debug_print("Skipping too long tag: %s\n", infl_tag);
-            continue;
-        }
         outlen += strlen(infl_tag);
         if (outlen > INDX_INFLTAG_SIZEMAX) {
             debug_print("Inflections text in %s too long (%zu)\n", label, outlen);
@@ -1562,14 +1510,14 @@ MOBI_RET mobi_reconstruct_orth(const MOBIRawml *rawml, MOBIFragment *first, size
         const MOBIIndexEntry *orth_entry = &rawml->orth->entries[i];
         const char *label = orth_entry->label;
         uint32_t entry_startpos;
-        MOBI_RET ret = mobi_get_indxentry_tagvalue(&entry_startpos, orth_entry, INDX_TAG_ORTH_POSITION);
+        MOBI_RET ret = mobi_get_indxentry_tagvalue(&entry_startpos, orth_entry, INDX_TAG_ORTH_STARTPOS);
         if (ret != MOBI_SUCCESS) {
             i++;
             continue;
         }
         size_t entry_length = 0;
         uint32_t entry_textlen = 0;
-        mobi_get_indxentry_tagvalue(&entry_textlen, orth_entry, INDX_TAG_ORTH_LENGTH);
+        mobi_get_indxentry_tagvalue(&entry_textlen, orth_entry, INDX_TAG_ORTH_ENDPOS);
         char *start_tag;
         if (entry_textlen == 0) {
             entry_length += start_tag1_len + strlen(label);
@@ -1710,8 +1658,8 @@ MOBI_RET mobi_reconstruct_links_kf7(const MOBIRawml *rawml) {
                 break;
             case 'h':
             case 'l':
+                /* fallthrough */
                 data_cur += 2;
-                /* falls through */
             case 'r':
                 /* (hi|lo)recindex="00000" */
                 /* replace link with src="resource00000.ext" */
@@ -1990,11 +1938,11 @@ MOBI_RET mobi_strip_mobitags(MOBIPart *part) {
         part_size += curr->size;
         
         unsigned char *new_data = malloc(part_size);
-        if (new_data == NULL) {
-            mobi_list_del_all(first);
-            debug_print("%s\n", "Memory allocation failed");
-            return MOBI_MALLOC_FAILED;
-        }
+		if (new_data == NULL) {
+			mobi_list_del_all(first);
+			debug_print("%s\n", "Memory allocation failed");
+			return MOBI_MALLOC_FAILED;
+		}
         unsigned char *data_out = new_data;
         while (first) {
             memcpy(data_out, first->fragment, first->size);

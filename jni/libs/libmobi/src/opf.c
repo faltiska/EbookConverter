@@ -1,7 +1,7 @@
 /** @file opf.c
  *  @brief Functions for handling OPF structures
  *
- * Copyright (c) 2020 Bartek Fabiszewski
+ * Copyright (c) 2014 Bartek Fabiszewski
  * http://www.fabiszewski.net
  *
  * This file is part of libmobi.
@@ -96,16 +96,11 @@ MOBI_RET mobi_build_opf_guide(OPF *opf, const MOBIRawml *rawml) {
         debug_print("%s\n", "Initialization failed");
         return MOBI_INIT_FAILED;
     }
-    size_t i = 0;
-    size_t j = 0;
+    size_t i = 0, j = 0;
     MOBI_RET ret;
     size_t count = rawml->guide->entries_count;
     if (count == 0) {
         return MOBI_SUCCESS;
-    }
-    if (rawml->frag == NULL) {
-        debug_print("%s\n", "Missing frag part");
-        return MOBI_DATA_CORRUPT;
     }
     opf->guide = malloc(sizeof(OPFguide));
     if (opf->guide == NULL) {
@@ -156,7 +151,7 @@ MOBI_RET mobi_build_opf_guide(OPF *opf, const MOBIRawml *rawml) {
             /* FIXME: I need some examples which use other tags */
             //mobi_get_indxentry_tagvalue(&frag_number, guide_entry, INDX_TAG_FRAG_FILE_NR);
         }
-        if (frag_number >= rawml->frag->entries_count) {
+        if (frag_number > rawml->frag->entries_count) {
             debug_print("Wrong frag entry index (%i)\n", frag_number);
             free(ref_title);
             i++;
@@ -198,12 +193,12 @@ MOBI_RET mobi_build_opf_guide(OPF *opf, const MOBIRawml *rawml) {
                 debug_print("%s\n", "Memory allocation failed");
                 return MOBI_MALLOC_FAILED;
             }
-            memcpy(ref_type, type, type_size);
+            strncpy(ref_type, type, type_size);
             ref_type[type_size] = '\0';
         }
         debug_print("<reference type=\"%s\" title=\"%s\" href=\"part%05u.html\" />", ref_type, ref_title, file_number);
         char href[FILENAME_MAX + 1];
-        snprintf(href, sizeof(href), "part%05u.html", file_number);
+        snprintf(href, FILENAME_MAX, "part%05u.html", file_number);
         char *ref_href = strdup(href);
         reference[j] = calloc(1, sizeof(OPFreference));
         *reference[j] = (OPFreference) { ref_type, ref_title, ref_href };
@@ -569,7 +564,6 @@ MOBI_RET mobi_build_ncx(MOBIRawml *rawml, const OPF *opf) {
             debug_print("%s\n", "Memory allocation failed");
             return MOBI_MALLOC_FAILED;
         }
-        MOBIAttrType pref_attr = ATTR_ID;
         while (i < count) {
             const MOBIIndexEntry *ncx_entry = &rawml->ncx->entries[i];
             const char *label = ncx_entry->label;
@@ -613,7 +607,7 @@ MOBI_RET mobi_build_ncx(MOBIRawml *rawml, const OPF *opf) {
                 }
                 uint32_t filenumber;
                 char targetid[MOBI_ATTRNAME_MAXSIZE + 1];
-                ret = mobi_get_id_by_posoff(&filenumber, targetid, rawml, posfid, posoff, &pref_attr);
+                ret = mobi_get_id_by_posoff(&filenumber, targetid, rawml, posfid, posoff);
                 if (ret != MOBI_SUCCESS) {
                     free(text);
                     free(target);
@@ -622,11 +616,7 @@ MOBI_RET mobi_build_ncx(MOBIRawml *rawml, const OPF *opf) {
                 }
                 /* FIXME: posoff == 0 means top of file? */
                 if (posoff) {
-                    int n = snprintf(target, MOBI_ATTRNAME_MAXSIZE + 1, "part%05u.html#%s", filenumber, targetid);
-                    if (n > MOBI_ATTRVALUE_MAXSIZE + 1) {
-                        debug_print("Warning: truncated target: %s\n", target);
-                        snprintf(target, MOBI_ATTRNAME_MAXSIZE + 1, "part%05u.html", filenumber);
-                    }
+                    snprintf(target, MOBI_ATTRNAME_MAXSIZE + 1, "part%05u.html#%s", filenumber, targetid);
                 } else {
                     snprintf(target, MOBI_ATTRNAME_MAXSIZE + 1, "part%05u.html", filenumber);
                 }
@@ -677,9 +667,9 @@ MOBI_RET mobi_build_ncx(MOBIRawml *rawml, const OPF *opf) {
                 mobi_free_ncx(ncx, i);
                 return ret;
             }
-            if ((first_child != MOBI_NOTSET && first_child >= rawml->ncx->entries_count) ||
-                (last_child != MOBI_NOTSET && last_child >= rawml->ncx->entries_count) ||
-                (parent != MOBI_NOTSET && parent >= rawml->ncx->entries_count)) {
+            if ((first_child != MOBI_NOTSET && first_child > rawml->ncx->entries_count) ||
+                (last_child != MOBI_NOTSET && last_child > rawml->ncx->entries_count) ||
+                (parent != MOBI_NOTSET && parent > rawml->ncx->entries_count)) {
                 free(text);
                 free(target);
                 mobi_free_ncx(ncx, i);
@@ -1156,38 +1146,32 @@ MOBI_RET mobi_build_opf_metadata(OPF *opf,  const MOBIData *m, const MOBIRawml *
     if (mobi_is_dictionary(m)) {
         if (opf->metadata->x_meta->dictionary_in_lang == NULL) {
             if (m->mh && m->mh->dict_input_lang) {
-                uint32_t dict_lang_in = *m->mh->dict_input_lang;
-                const char *lang = mobi_get_locale_string(dict_lang_in);
-                if (lang) {
-                    opf->metadata->x_meta->dictionary_in_lang = calloc(OPF_META_MAX_TAGS, sizeof(char*));
-                    if (opf->metadata->x_meta->dictionary_in_lang == NULL) {
-                        debug_print("%s\n", "Memory allocation failed");
-                        return MOBI_MALLOC_FAILED;
-                    }
-                    opf->metadata->x_meta->dictionary_in_lang[0] = strdup(lang);
+                opf->metadata->x_meta->dictionary_in_lang = calloc(OPF_META_MAX_TAGS, sizeof(char*));
+                if (opf->metadata->x_meta->dictionary_in_lang == NULL) {
+                    debug_print("%s\n", "Memory allocation failed");
+                    return MOBI_MALLOC_FAILED;
                 }
+                uint32_t dict_lang_in = *m->mh->dict_input_lang;
+                opf->metadata->x_meta->dictionary_in_lang[0] = strdup(mobi_get_locale_string(dict_lang_in));
             }
         }
         if (opf->metadata->x_meta->dictionary_out_lang == NULL) {
             if (m->mh && m->mh->dict_output_lang) {
-                uint32_t dict_lang_out = *m->mh->dict_output_lang;
-                const char *lang = mobi_get_locale_string(dict_lang_out);
-                if (lang) {
-                    opf->metadata->x_meta->dictionary_out_lang = calloc(OPF_META_MAX_TAGS, sizeof(char*));
-                    if (opf->metadata->x_meta->dictionary_out_lang == NULL) {
-                        debug_print("%s\n", "Memory allocation failed");
-                        return MOBI_MALLOC_FAILED;
-                    }
-                    opf->metadata->x_meta->dictionary_out_lang[0] = strdup(lang);
+                opf->metadata->x_meta->dictionary_out_lang = calloc(OPF_META_MAX_TAGS, sizeof(char*));
+                if (opf->metadata->x_meta->dictionary_out_lang == NULL) {
+                    debug_print("%s\n", "Memory allocation failed");
+                    return MOBI_MALLOC_FAILED;
                 }
+                uint32_t dict_lang_in = *m->mh->dict_output_lang;
+                opf->metadata->x_meta->dictionary_out_lang[0] = strdup(mobi_get_locale_string(dict_lang_in));
             }
         }
-        if (rawml->orth && rawml->orth->orth_index_name) {
+        if (rawml->orth->orth_index_name) {
             opf->metadata->x_meta->default_lookup_index = calloc(OPF_META_MAX_TAGS, sizeof(char*));
-            if (opf->metadata->x_meta->default_lookup_index == NULL) {
-                debug_print("%s\n", "Memory allocation failed");
-                return MOBI_MALLOC_FAILED;
-            }
+			if (opf->metadata->x_meta->default_lookup_index == NULL) {
+				debug_print("%s\n", "Memory allocation failed");
+				return MOBI_MALLOC_FAILED;
+			}
             opf->metadata->x_meta->default_lookup_index[0] = strdup(rawml->orth->orth_index_name);
         }
     }
@@ -1391,7 +1375,8 @@ MOBI_RET mobi_xml_write_spine(xmlTextWriterPtr writer, const MOBIRawml *rawml) {
         curr = curr->next;
     }
     if (curr) {
-        snprintf(ncxid, sizeof(ncxid), "resource%05zu", curr->uid);
+        //sprintf(ncxid, "resource%05zu", curr->uid);
+		sprintf(ncxid, "toc"); // GKochaniak, changed
     } else {
         return MOBI_DATA_CORRUPT;
     }
@@ -1475,18 +1460,24 @@ MOBI_RET mobi_xml_write_manifest(xmlTextWriterPtr writer, const MOBIRawml *rawml
     }
     if (rawml->resources != NULL) {
         MOBIPart *curr = rawml->resources;
+		bool hasToc = false; // GKochaniak
+		bool hasContent = false; // GKochaniak
         while (curr != NULL) {
             MOBIFileMeta file_meta = mobi_get_filemeta_by_type(curr->type);
-            if (curr->type != T_NCX) {
-                snprintf(href, sizeof(href), "resource%05zu.%s", curr->uid, file_meta.extension);
-            } else {
-                //the href attribute was something like resource0005.ncx but
-                //the toc file in the archive was called toc.ncx
-                //so the epub readers were not finding the file and
-                //were not able to show the table of content
-                snprintf(href, sizeof(href), "toc.ncx");
-            }
-            snprintf(id, sizeof(id), "resource%05zu", curr->uid);
+			if (file_meta.type == T_NCX && !hasToc) { // GKochaniak + 11 lines below
+				sprintf(href, "toc.%s", file_meta.extension);
+				sprintf(id, "toc");
+				hasToc = true;
+			}
+			else if (file_meta.type == T_OPF && !hasContent) {
+				sprintf(href, "content.%s", file_meta.extension);
+				sprintf(id, "content");
+				hasContent = true;
+			}
+			else {
+				sprintf(href, "resource%05zu.%s", curr->uid, file_meta.extension);
+				sprintf(id, "resource%05zu", curr->uid);
+			}
             MOBI_RET ret = mobi_xml_write_item(writer, id, href, file_meta.mime_type);
             if (ret != MOBI_SUCCESS) {
                 return ret;

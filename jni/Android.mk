@@ -16,7 +16,7 @@ LOCAL_STATIC_LIBRARIES := libmobi
 # some functions from them in my larger project. If this is not necessary, lump
 # them all together in LOCAL_STATIC_LIBRARIES
 LOCAL_WHOLE_STATIC_LIBRARIES := unzip101e libiconv libxml2
-LOCAL_SHARED_LIBRARIES :=
+LOCAL_SHARED_LIBRARIES := 
 include $(BUILD_SHARED_LIBRARY)
 
 ################################################################################
@@ -40,7 +40,6 @@ LOCAL_SRC_FILES += libs/libmobi/src/index.c
 LOCAL_SRC_FILES += libs/libmobi/src/memory.c
 LOCAL_SRC_FILES += libs/libmobi/src/opf.c
 LOCAL_SRC_FILES += libs/libmobi/src/parse_rawml.c
-LOCAL_SRC_FILES += libs/libmobi/src/randombytes.c
 LOCAL_SRC_FILES += libs/libmobi/src/read.c
 LOCAL_SRC_FILES += libs/libmobi/src/save_epub.c
 LOCAL_SRC_FILES += libs/libmobi/src/structure.c
@@ -48,7 +47,6 @@ LOCAL_SRC_FILES += libs/libmobi/src/util.c
 LOCAL_SRC_FILES += libs/libmobi/src/write.c
 LOCAL_SRC_FILES += libs/libmobi/src/sha1.c
 LOCAL_SRC_FILES += libs/libmobi/src/meta.c
-LOCAL_SRC_FILES += libs/libmobi/src/miniz.c
 
 include $(BUILD_STATIC_LIBRARY)
 
