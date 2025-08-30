@@ -24,7 +24,6 @@ import android.view.MenuInflater;
 import android.view.MenuItem;
 import android.view.View;
 import android.view.View.OnClickListener;
-import android.view.ViewConfiguration;
 import android.view.ViewGroup;
 import android.view.inputmethod.InputMethodManager;
 import android.widget.AdapterView;
@@ -39,7 +38,6 @@ import android.widget.TextView;
 
 import java.io.File;
 import java.io.IOException;
-import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
@@ -102,17 +100,6 @@ public class GenericFileDialog extends ListActivity implements AdapterView.OnIte
         setTheme(android.R.style.Theme_Holo_Light_DarkActionBar);
 		super.onCreate(savedInstanceState);
 		setResult(RESULT_CANCELED, getIntent());
-        if (Build.VERSION.SDK_INT > 10) {
-            // Always show vertical ellipsis overflow menu button.
-            try {
-                ViewConfiguration config = ViewConfiguration.get(this);
-                Field menuKeyField = ViewConfiguration.class.getDeclaredField("sHasPermanentMenuKey");
-                if(menuKeyField != null) {
-                    menuKeyField.setAccessible(true);
-                    menuKeyField.setBoolean(config, false);
-                }
-            } catch (Exception ex) {}
-        }
 		setContentView(R.layout.generic_file_dialog);
 
         String newTitle = getIntent().getStringExtra(SET_TITLE_TEXT);

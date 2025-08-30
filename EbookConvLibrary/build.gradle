@@ -1,11 +1,11 @@
 apply plugin: 'com.android.library'
 
 android {
-    compileSdkVersion 32
+    compileSdkVersion 36
 
     defaultConfig {
         minSdkVersion 21
-        targetSdkVersion 32
+        targetSdkVersion 33
 
         testInstrumentationRunner "android.support.test.runner.AndroidJUnitRunner"
         consumerProguardFiles 'consumer-rules.pro'
@@ -24,7 +24,8 @@ android {
         }
     }
 
-    ndkVersion "24.0.8215888"
+    ndkVersion "28.2.13676358"
+    namespace 'com.ebookconvlibrary'
 }
 
 dependencies {
